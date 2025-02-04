@@ -1,6 +1,9 @@
 ﻿using Android.Views;
 using Android.Widget;
+using AndroidX.Activity;
+using AndroidX.Fragment.App;
 using AsyncAwaitBestPractices;
+using Microsoft.Maui.Platform;
 using Mopups.Interfaces;
 using Mopups.Pages;
 using Mopups.Services;
@@ -9,7 +12,7 @@ namespace Mopups.Droid.Implementation;
 
 public class AndroidMopups : IPopupPlatform
 {
-    private static FrameLayout? DecoreView => Platform.CurrentActivity?.Window?.DecorView as FrameLayout;
+    private static FrameLayout? DecoreView => GetTopFragmentDecorView();
 
     public static bool SendBackPressed(Action? backPressedHandler = null)
     {
@@ -36,22 +39,17 @@ public class AndroidMopups : IPopupPlatform
 
     public Task AddAsync(PopupPage page)
     {
-        try
-        {
-            HandleAccessibility(true);
+        HandleAccessibility(true);
 
-            page.Parent = MauiApplication.Current.Application.Windows[0].Content as Element;
-            var AndroidNativeView = IPopupPlatform.GetOrCreateHandler<PopupPageHandler>(page).PlatformView as Android.Views.View;
-            DecoreView?.AddView(AndroidNativeView);
+        page.Parent = MauiApplication.Current.Application.Windows[0].Content as Element;
+        var handler = page.Handler ??= new PopupPageHandler(page.Parent.Handler.MauiContext);
 
-            return PostAsync(AndroidNativeView);
-        }
-        catch (Exception)
-        {
-            throw;
-        }
+        var androidNativeView = IPopupPlatform.GetOrCreateHandler<PopupPageHandler>(page).PlatformView as Android.Views.View;
+        DecoreView?.AddView(androidNativeView);
+        
+        return PostAsync(androidNativeView);
     }
-
+    
     public Task RemoveAsync(PopupPage page)
     {
         var renderer = IPopupPlatform.GetOrCreateHandler<PopupPageHandler>(page);
@@ -122,5 +120,29 @@ public class AndroidMopups : IPopupPlatform
         nativeView.Post(() => tcs.SetResult(true));
 
         return tcs.Task;
+    }
+    
+    static FrameLayout? GetTopFragmentDecorView()
+    {
+        if (Platform.CurrentActivity is not ComponentActivity componentActivity)
+        {
+            return null;
+        }
+
+        var fragments = componentActivity.GetFragmentManager()?.Fragments;
+        
+        if (fragments is null || !fragments.Any())
+        {
+            return Platform.CurrentActivity?.Window?.DecorView as FrameLayout;;
+        }
+
+        var topFragment = fragments[^1];
+
+        if (topFragment is DialogFragment dialogFragment)
+        {
+            return dialogFragment.Dialog?.Window?.DecorView as FrameLayout;
+        }
+
+        return topFragment.Activity?.Window?.DecorView as FrameLayout;
     }
 }
