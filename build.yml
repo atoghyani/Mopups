@@ -37,9 +37,8 @@ steps:
 
   # Install MAUI workloads
   - script: |
-      dotnet workload install maui --ignore-failed-sources
-      dotnet workload restore
-    displayName: 'Install .NET MAUI workloads'
+      dotnet workload restore ./Mopups/Mopups.Maui/Mopups.Maui.csproj
+    displayName: 'Restore MAUI workloads for Mopups.Maui only'
 
 
   # - task: DotNetCoreCLI@2
