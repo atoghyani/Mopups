@@ -24,16 +24,16 @@ steps:
     clean: true
 
   - task: UseDotNet@2
-    displayName: 'Use .NET 8 SDK'
+    displayName: 'Use .NET 9 SDK'
     inputs:
       packageType: 'sdk'
-      version: '8.0.403'
+      version: '9.0.x'
 
   # - task: UseDotNet@2
-  #   displayName: 'Use .NET 8 SDK'
+  #   displayName: 'Use .NET 9 SDK'
   #   inputs:
   #     packageType: 'sdk'
-  #     version: '8.0.x'
+  #     version: '9.0.x'
 
   - script: |
       dotnet workload install maui --ignore-failed-sources
