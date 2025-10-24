@@ -42,11 +42,10 @@ public class AndroidMopups : IPopupPlatform
         HandleAccessibility(true);
 
         page.Parent = MauiApplication.Current.Application.Windows[0].Content as Element;
-        var handler = page.Handler ??= new PopupPageHandler(page.Parent.Handler.MauiContext);
-
+        
         var androidNativeView = IPopupPlatform.GetOrCreateHandler<PopupPageHandler>(page).PlatformView as Android.Views.View;
         DecoreView?.AddView(androidNativeView);
-        
+
         return PostAsync(androidNativeView);
     }
     
