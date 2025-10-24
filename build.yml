@@ -16,6 +16,12 @@ variables:
   BuildConfiguration: 'Release'
   PackOutput: '$(Build.ArtifactStagingDirectory)/packages'
 
+  # 👇 Set your NuGet version here (examples):
+  # PackageVersion: '1.2.$(Build.BuildId)'        # e.g., 1.2.12345
+  # PackageVersion: '1.2.0-alpha.$(Build.BuildId)'# e.g., 1.2.0-alpha.12345
+  # PackageVersion: '1.2.0'                       # fixed version
+  PackageVersion: '1.2.$(Build.BuildId)-hotfix'
+
 pool:
   vmImage: 'windows-latest'   # NuGetCommand@2 uses NuGet.exe; Windows is the smoothest path
 
@@ -28,12 +34,6 @@ steps:
     inputs:
       packageType: 'sdk'
       version: '9.0.x'
-
-  # - task: UseDotNet@2
-  #   displayName: 'Use .NET 9 SDK'
-  #   inputs:
-  #     packageType: 'sdk'
-  #     version: '9.0.x'
 
   - script: |
       dotnet workload install maui --ignore-failed-sources
@@ -52,13 +52,6 @@ steps:
       dotnet workload restore "$proj"
     displayName: 'Workload restore (Mopups.csproj only)'
 
-
-  # - task: DotNetCoreCLI@2
-  #   displayName: 'Restore'
-  #   inputs:
-  #     command: 'restore'
-  #     projects: '**/*.sln'
-
   - task: DotNetCoreCLI@2
     displayName: 'Build ($(BuildConfiguration))'
     inputs:
@@ -66,25 +59,22 @@ steps:
       projects: '**/Mopups.csproj'
       arguments: '--configuration $(BuildConfiguration)'
 
-  # - task: DotNetCoreCLI@2
-  #   displayName: 'Test'
-  #   inputs:
-  #     command: 'test'
-  #     projects: '**/*Tests/*.csproj'
-  #     arguments: '--configuration $(BuildConfiguration) --no-build --logger trx'
-  #     publishTestResults: true
+  - script: echo "Packing version $(PackageVersion)"
+    displayName: 'Show package version'
 
   - task: DotNetCoreCLI@2
     displayName: 'Pack NuGet packages'
     inputs:
       command: 'pack'
-      packagesToPack: '**/Mopups.csproj'
+      packagesToPack: '**/Mopups.csproj'           # pack project(s), not the solution
       configuration: '$(BuildConfiguration)'
       nobuild: true
       includesymbols: false
-      versioningScheme: 'off'
+      versioningScheme: 'off'                      # let our -p:Version win
       packDirectory: '$(PackOutput)'
-      arguments: '--configuration $(BuildConfiguration) /p:PackageVersion=1.2.$(Build.BuildId)'
+      arguments: >-
+        --configuration $(BuildConfiguration)
+        -p:Version=$(PackageVersion)
 
   # --- Your provided steps, combined ---
 
@@ -104,7 +94,6 @@ steps:
 
   - task: NuGetCommand@2
     displayName: 'NuGet push to internal feed'
-    # condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest')))
     inputs:
       command: 'push'
       packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
