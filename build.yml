@@ -53,7 +53,7 @@ steps:
     inputs:
       command: 'build'
       projects: '**/Mopups.csproj'
-      arguments: '--configuration $(BuildConfiguration) --no-restore'
+      arguments: '--configuration $(BuildConfiguration)'
 
   # - task: DotNetCoreCLI@2
   #   displayName: 'Test'
