@@ -35,10 +35,22 @@ steps:
   #     packageType: 'sdk'
   #     version: '8.0.x'
 
-  # Install MAUI workloads
   - script: |
-      dotnet workload restore ./Mopups/Mopups.Maui/Mopups.Maui.csproj
-    displayName: 'Restore MAUI workloads for Mopups.Maui only'
+      dotnet workload install maui --ignore-failed-sources
+    displayName: 'Install .NET MAUI workloads'
+
+  # Restore workloads for this single project (correct path)
+  - powershell: |
+      $proj = "$(Build.SourcesDirectory)\Mopups\Mopups.Maui\Mopups.csproj"
+      if (-not (Test-Path -LiteralPath $proj)) {
+        Write-Host "Sources dir = $(Build.SourcesDirectory)"
+        Write-Error "Expected project not found: $proj"
+        Get-ChildItem -Recurse -Filter *.csproj | Select-Object FullName | Format-Table -AutoSize
+        exit 1
+      }
+      Write-Host "Restoring workloads for $proj"
+      dotnet workload restore "$proj"
+    displayName: 'Workload restore (Mopups.csproj only)'
 
 
   # - task: DotNetCoreCLI@2
