@@ -37,7 +37,7 @@ steps:
 
   # Install MAUI workloads
   - script: |
-      dotnet workload restore ./Mopups/Mopups.Maui/Mopups.Maui.csproj
+      dotnet workload restore ./Mopups.Maui/Mopups.Maui.csproj
     displayName: 'Restore MAUI workloads for Mopups.Maui only'
 
 
