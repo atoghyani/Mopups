@@ -1,0 +1,88 @@
+# azure-pipelines.yml
+trigger:
+  branches:
+    include:
+      - master
+  tags:
+    include:
+      - '*'   # optional: run on any tag
+
+pr:
+  branches:
+    include:
+      - '*'
+
+variables:
+  BuildConfiguration: 'Release'
+  PackOutput: '$(Build.ArtifactStagingDirectory)/packages'
+
+pool:
+  vmImage: 'windows-latest'   # NuGetCommand@2 uses NuGet.exe; Windows is the smoothest path
+
+steps:
+  - checkout: self
+    clean: true
+
+  # Use a specific SDK if needed (optional)
+  # - task: UseDotNet@2
+  #   inputs:
+  #     packageType: 'sdk'
+  #     version: '8.x'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Restore'
+    inputs:
+      command: 'restore'
+      projects: '**/*.sln'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Build ($(BuildConfiguration))'
+    inputs:
+      command: 'build'
+      projects: '**/*.sln'
+      arguments: '--configuration $(BuildConfiguration) --no-restore'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Test'
+    inputs:
+      command: 'test'
+      projects: '**/*Tests/*.csproj'
+      arguments: '--configuration $(BuildConfiguration) --no-build --logger trx'
+      publishTestResults: true
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Pack NuGet packages'
+    inputs:
+      command: 'pack'
+      packagesToPack: '**/*.csproj'
+      configuration: '$(BuildConfiguration)'
+      nobuild: true
+      includesymbols: false
+      versioningScheme: 'off'
+      packDirectory: '$(PackOutput)'
+
+  # --- Your provided steps, combined ---
+
+  - task: CopyFiles@2
+    displayName: 'Copy Files to: $(Build.ArtifactStagingDirectory)'
+    inputs:
+      SourceFolder: '$(Build.SourcesDirectory)'
+      Contents: '**\*.nupkg'
+      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: drop'
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: 'drop'
+      publishLocation: 'Container'
+
+  - task: NuGetCommand@2
+    displayName: 'NuGet push to internal feed'
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    inputs:
+      command: 'push'
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+      nuGetFeedType: 'internal'
+      publishVstsFeed: 'f64f6e16-0574-4b91-8d00-0c5742228fae/b4889b15-c3ca-4c10-862e-60121d68680c'
+      allowPackageConflicts: true   # optional
